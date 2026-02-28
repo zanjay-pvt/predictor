@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Added useEffect
 import {
   Star,
   MemoryStick,
@@ -25,6 +25,11 @@ interface FormState {
 }
 
 export function PredictionForm() {
+  // 1. Prevent Hydration Error: Track if component is mounted in the browser
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+  setMounted(true);
+}, []);
   const [form, setForm] = useState<FormState>({
     rating: "",
     ram: "",
@@ -39,43 +44,59 @@ export function PredictionForm() {
   const [price, setPrice] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
+  // Set mounted to true once the component loads on the user's screen
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   function handleChange(field: keyof FormState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function predictPrice() {
+  async function predictPrice() {
+    // Basic validation to ensure fields aren't empty
+    if (!form.ram || !form.camera_mp || !form.battery_capacity) {
+      alert("Please fill in the RAM, Camera, and Battery fields.");
+      return;
+    }
+
     setIsCalculating(true);
 
-    setTimeout(() => {
-      const rating = parseFloat(form.rating) || 4.0;
-      const ram = parseFloat(form.ram) || 4;
-      const display = parseFloat(form.display) || 6.0;
-      const camera_mp = parseFloat(form.camera_mp) || 48;
-      const battery_capacity = parseFloat(form.battery_capacity) || 4000;
-      const simMultiplier = form.sim === "dual" ? 1.1 : 1;
-      const cardMultiplier = form.card === "supported" ? 1.05 : 1;
-      const processorMultiplier = form.processor_type === "snapdragon" ? 1.15 : form.processor_type === "exynos" ? 1.08 : 1.0;
+    try {
+      const response = await fetch("http://localhost:8000/predict", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rating: parseFloat(form.rating) || 4.2,
+          ram: parseFloat(form.ram),
+          display: parseFloat(form.display),
+          camera_mp: parseFloat(form.camera_mp),
+          battery_capacity: parseFloat(form.battery_capacity),
+          processor_type: form.processor_type,
+          card: form.card === "supported" ? 1 : 0,
+          sim: form.sim === "dual" ? 1 : 0,
+        }),
+      });
 
-      const base =
-        rating * 50 +
-        ram * 28 +
-        display * 45 +
-        camera_mp * 3.2 +
-        battery_capacity * 0.035 +
-        120;
-      const predicted = base * simMultiplier * cardMultiplier * processorMultiplier;
+      if (!response.ok) throw new Error("Backend connection failed");
 
-      setPrice(Math.round(predicted * 100) / 100);
+      const data = await response.json();
+      setPrice(data.estimated_price);
+    } catch (error) {
+      console.error("Error:", error);
+      alert("⚠️ Python API is offline. Run: python -m uvicorn api:app --reload");
+    } finally {
       setIsCalculating(false);
-    }, 800);
+    }
   }
 
   return (
     <div className="mx-auto w-full max-w-4xl">
-      {/* Glassmorphism Card */}
       <div className="rounded-2xl border border-border bg-card p-6 backdrop-blur-xl sm:p-8 lg:p-10">
-        {/* Input Grid */}
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          
           {/* Rating */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -90,7 +111,7 @@ export function PredictionForm() {
               placeholder="e.g. 4.5"
               value={form.rating}
               onChange={(e) => handleChange("rating", e.target.value)}
-              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -105,7 +126,7 @@ export function PredictionForm() {
               placeholder="e.g. 12"
               value={form.ram}
               onChange={(e) => handleChange("ram", e.target.value)}
-              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -121,7 +142,7 @@ export function PredictionForm() {
               placeholder="e.g. 6.7"
               value={form.display}
               onChange={(e) => handleChange("display", e.target.value)}
-              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -136,11 +157,11 @@ export function PredictionForm() {
               placeholder="e.g. 108"
               value={form.camera_mp}
               onChange={(e) => handleChange("camera_mp", e.target.value)}
-              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          {/* Battery Capacity */}
+          {/* Battery */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <BatteryFull className="h-4 w-4 text-primary" />
@@ -151,11 +172,11 @@ export function PredictionForm() {
               placeholder="e.g. 5000"
               value={form.battery_capacity}
               onChange={(e) => handleChange("battery_capacity", e.target.value)}
-              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          {/* Processor Type */}
+          {/* Processor */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Cpu className="h-4 w-4 text-primary" />
@@ -164,15 +185,18 @@ export function PredictionForm() {
             <select
               value={form.processor_type}
               onChange={(e) => handleChange("processor_type", e.target.value)}
-              className="appearance-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+              className="appearance-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             >
               <option value="snapdragon">Snapdragon</option>
-              <option value="exynos">Exynos</option>
+              <option value="mediatek">MediaTek / Dimensity</option>
+              <option value="exynos">Samsung Exynos</option>
+              <option value="apple">Apple Bionic</option>
+              <option value="unisoc">Unisoc</option>
               <option value="other">Other</option>
             </select>
           </div>
 
-          {/* Memory Card */}
+          {/* Card */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <HardDrive className="h-4 w-4 text-primary" />
@@ -181,7 +205,7 @@ export function PredictionForm() {
             <select
               value={form.card}
               onChange={(e) => handleChange("card", e.target.value)}
-              className="appearance-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+              className="appearance-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             >
               <option value="not-supported">Not Supported</option>
               <option value="supported">Supported</option>
@@ -197,7 +221,7 @@ export function PredictionForm() {
             <select
               value={form.sim}
               onChange={(e) => handleChange("sim", e.target.value)}
-              className="appearance-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+              className="appearance-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
             >
               <option value="single">Single SIM</option>
               <option value="dual">Dual SIM</option>
@@ -205,32 +229,36 @@ export function PredictionForm() {
           </div>
         </div>
 
-        {/* Result + Button Row */}
+        {/* Result Row */}
         <div className="mt-8 flex flex-col items-stretch gap-5 sm:flex-row sm:items-end">
-          {/* Estimated Value */}
           <div className="flex-1 rounded-2xl border border-border bg-secondary/60 px-6 py-5 backdrop-blur-md">
             <p className="mb-1 text-xs font-semibold uppercase tracking-widest text-primary">
-              Estimated Value
+              AI Predicted Value
             </p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-foreground sm:text-4xl">
-                {price !== null ? `₹${price.toFixed(2)}` : "₹0.00"}
-              </span>
+            {!mounted ? (
+                "₹0.00" 
+             ) : price !== null ? (
+                `₹${price.toLocaleString('en-IN')}` 
+               ) : (
+            "₹0.00"
+             )}
+          </span>
               <span className="text-sm text-muted-foreground">INR</span>
             </div>
             <p className="mt-1 text-xs text-muted-foreground italic">
-              Calculated based on current market trends & specs.
+              AI model trained on 2024-2025 market datasets.
             </p>
           </div>
 
-          {/* Predict Button */}
           <button
             onClick={predictPrice}
             disabled={isCalculating}
             className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-8 py-4 text-sm font-semibold text-primary-foreground transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-60 sm:px-10"
           >
             <LayoutGrid className="h-5 w-5" />
-            {isCalculating ? "Calculating..." : "Predict Price"}
+            {isCalculating ? "Consulting AI..." : "Predict Price"}
           </button>
         </div>
       </div>
