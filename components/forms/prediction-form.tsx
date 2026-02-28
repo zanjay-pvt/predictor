@@ -2,32 +2,38 @@
 
 import { useState } from "react";
 import {
+  Star,
   MemoryStick,
   Monitor,
   Camera,
   BatteryFull,
   Smartphone,
   HardDrive,
+  Cpu,
   LayoutGrid,
 } from "lucide-react";
 
 interface FormState {
+  rating: string;
   ram: string;
   display: string;
-  camera: string;
-  battery: string;
+  camera_mp: string;
+  battery_capacity: string;
+  processor_type: string;
+  card: string;
   sim: string;
-  storage: string;
 }
 
 export function PredictionForm() {
   const [form, setForm] = useState<FormState>({
+    rating: "",
     ram: "",
     display: "",
-    camera: "",
-    battery: "",
+    camera_mp: "",
+    battery_capacity: "",
+    processor_type: "snapdragon",
+    card: "not-supported",
     sim: "single",
-    storage: "not-supported",
   });
 
   const [price, setPrice] = useState<number | null>(null);
@@ -41,20 +47,23 @@ export function PredictionForm() {
     setIsCalculating(true);
 
     setTimeout(() => {
+      const rating = parseFloat(form.rating) || 4.0;
       const ram = parseFloat(form.ram) || 4;
       const display = parseFloat(form.display) || 6.0;
-      const camera = parseFloat(form.camera) || 48;
-      const battery = parseFloat(form.battery) || 4000;
+      const camera_mp = parseFloat(form.camera_mp) || 48;
+      const battery_capacity = parseFloat(form.battery_capacity) || 4000;
       const simMultiplier = form.sim === "dual" ? 1.1 : 1;
-      const storageMultiplier = form.storage === "supported" ? 1.05 : 1;
+      const cardMultiplier = form.card === "supported" ? 1.05 : 1;
+      const processorMultiplier = form.processor_type === "snapdragon" ? 1.15 : form.processor_type === "exynos" ? 1.08 : 1.0;
 
       const base =
+        rating * 50 +
         ram * 28 +
         display * 45 +
-        camera * 3.2 +
-        battery * 0.035 +
+        camera_mp * 3.2 +
+        battery_capacity * 0.035 +
         120;
-      const predicted = base * simMultiplier * storageMultiplier;
+      const predicted = base * simMultiplier * cardMultiplier * processorMultiplier;
 
       setPrice(Math.round(predicted * 100) / 100);
       setIsCalculating(false);
@@ -66,12 +75,30 @@ export function PredictionForm() {
       {/* Glassmorphism Card */}
       <div className="rounded-2xl border border-border bg-card p-6 backdrop-blur-xl sm:p-8 lg:p-10">
         {/* Input Grid */}
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {/* Rating */}
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Star className="h-4 w-4 text-primary" />
+              Rating (1-5)
+            </label>
+            <input
+              type="number"
+              step="0.1"
+              min="0"
+              max="5"
+              placeholder="e.g. 4.5"
+              value={form.rating}
+              onChange={(e) => handleChange("rating", e.target.value)}
+              className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
           {/* RAM */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <MemoryStick className="h-4 w-4 text-primary" />
-              RAM Capacity (GB)
+              RAM (GB)
             </label>
             <input
               type="number"
@@ -98,22 +125,22 @@ export function PredictionForm() {
             />
           </div>
 
-          {/* Camera */}
+          {/* Camera MP */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Camera className="h-4 w-4 text-primary" />
-              Rear Camera (MP)
+              Camera (MP)
             </label>
             <input
               type="number"
               placeholder="e.g. 108"
-              value={form.camera}
-              onChange={(e) => handleChange("camera", e.target.value)}
+              value={form.camera_mp}
+              onChange={(e) => handleChange("camera_mp", e.target.value)}
               className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
           </div>
 
-          {/* Battery */}
+          {/* Battery Capacity */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <BatteryFull className="h-4 w-4 text-primary" />
@@ -122,17 +149,50 @@ export function PredictionForm() {
             <input
               type="number"
               placeholder="e.g. 5000"
-              value={form.battery}
-              onChange={(e) => handleChange("battery", e.target.value)}
+              value={form.battery_capacity}
+              onChange={(e) => handleChange("battery_capacity", e.target.value)}
               className="rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
             />
+          </div>
+
+          {/* Processor Type */}
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Cpu className="h-4 w-4 text-primary" />
+              Processor
+            </label>
+            <select
+              value={form.processor_type}
+              onChange={(e) => handleChange("processor_type", e.target.value)}
+              className="appearance-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+            >
+              <option value="snapdragon">Snapdragon</option>
+              <option value="exynos">Exynos</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          {/* Memory Card */}
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <HardDrive className="h-4 w-4 text-primary" />
+              Memory Card
+            </label>
+            <select
+              value={form.card}
+              onChange={(e) => handleChange("card", e.target.value)}
+              className="appearance-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
+            >
+              <option value="not-supported">Not Supported</option>
+              <option value="supported">Supported</option>
+            </select>
           </div>
 
           {/* SIM */}
           <div className="flex flex-col gap-2">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
               <Smartphone className="h-4 w-4 text-primary" />
-              SIM Support
+              SIM
             </label>
             <select
               value={form.sim}
@@ -141,22 +201,6 @@ export function PredictionForm() {
             >
               <option value="single">Single SIM</option>
               <option value="dual">Dual SIM</option>
-            </select>
-          </div>
-
-          {/* External Storage */}
-          <div className="flex flex-col gap-2">
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <HardDrive className="h-4 w-4 text-primary" />
-              External Storage
-            </label>
-            <select
-              value={form.storage}
-              onChange={(e) => handleChange("storage", e.target.value)}
-              className="appearance-none rounded-xl border border-border bg-input px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-1 focus:ring-primary"
-            >
-              <option value="not-supported">Not Supported</option>
-              <option value="supported">Supported</option>
             </select>
           </div>
         </div>
@@ -170,9 +214,9 @@ export function PredictionForm() {
             </p>
             <div className="flex items-baseline gap-2">
               <span className="text-3xl font-bold text-foreground sm:text-4xl">
-                {price !== null ? `$${price.toFixed(2)}` : "$0.00"}
+                {price !== null ? `₹${price.toFixed(2)}` : "₹0.00"}
               </span>
-              <span className="text-sm text-muted-foreground">USD</span>
+              <span className="text-sm text-muted-foreground">INR</span>
             </div>
             <p className="mt-1 text-xs text-muted-foreground italic">
               Calculated based on current market trends & specs.

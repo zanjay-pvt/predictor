@@ -1,6 +1,7 @@
-import { Navbar } from "@/components/navbar";
-import { PredictionForm } from "@/components/prediction-form";
-import { FeatureCards } from "@/components/feature-cards";
+import { Navbar } from "@/components/sections/navbar";
+import { PredictionForm } from "@/components/forms/prediction-form";
+import { FeatureCards } from "@/components/sections/feature-cards";
+import { Footer } from "@/components/sections/footer";
 
 export default function Home() {
   return (
@@ -41,9 +42,7 @@ export default function Home() {
         </main>
 
         {/* Footer */}
-        <footer className="py-8 text-center text-xs text-muted-foreground">
-          &copy; 2024 PredictorPro Systems. Powered by Advanced Intelligence.
-        </footer>
+        <Footer />
       </div>
     </div>
   );
